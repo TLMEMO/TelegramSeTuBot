@@ -1,0 +1,2 @@
+# TelegramSetuBot
+一个在Telegram应用中返回色图的Bot
