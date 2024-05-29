@@ -2,7 +2,7 @@ const config = require('./config');
 const TelegramBot = require('node-telegram-bot-api');
 const token = config.TG_API_TOKEN;
 const bot = new TelegramBot(token, { polling: true });
-const { getConfig, setTags, setPicMode, sendConfig, initConfig,returnPic } = require('./def_model')
+const { getConfig, setTags, setPicMode, sendConfig, initConfig,returnPic,excludeTags } = require('./def_model')
 
 // 处理 /settags 命令
 bot.onText(/\/settags (.+)/, (msg, match) => {
@@ -12,6 +12,17 @@ bot.onText(/\/settags (.+)/, (msg, match) => {
     if (config) {
       setTags(chatId, tags);
       bot.sendMessage(chatId, `已设置tags为: ${tags.join(', ')}`);
+    }
+  });
+});
+// 处理 /excludetags 命令
+bot.onText(/\/excludetags (.+)/, (msg, match) => {
+  const chatId = msg.chat.id;
+  const tags = match[1].split(' ');
+  getConfig(chatId, (config) => {
+    if (config) {
+      excludeTags(chatId, tags);
+      bot.sendMessage(chatId, `已排除tags为: ${tags.join(', ')}`);
     }
   });
 });
@@ -68,6 +79,7 @@ bot.onText(/\/init/, (msg) => {
   });
 });
 
+// 处理 /setu 命令
 bot.onText(/\/setu/, (msg) => {
   const chatId = msg.chat.id;
   getConfig(chatId, (config) => {

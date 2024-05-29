@@ -7,7 +7,8 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS configs (
       chatid TEXT PRIMARY KEY,
       tags TEXT,
-      picmode TEXT
+      picmode TEXT,
+      excludetags TEXT
     )
   `);
 });
@@ -21,9 +22,9 @@ const getConfig = (chatid, callback) => {
     } else {
       if (!row) {
         // 如果没有配置，则初始化一个新的配置
-        const newConfig = { chatid: chatid, tags: JSON.stringify([]), picmode: 'default' };
-        db.run("INSERT INTO configs (chatid, tags, picmode) VALUES (?, ?, ?)",
-          [newConfig.chatid, newConfig.tags, newConfig.picmode],
+        const newConfig = { chatid: chatid, tags: JSON.stringify([]), picmode: 'default' , excludetags: JSON.stringify([]) };
+        db.run("INSERT INTO configs (chatid, tags, picmode ,excludetags) VALUES (?, ?, ?, ?)",
+          [newConfig.chatid, newConfig.tags, newConfig.picmode,newConfig.excludetags],
           (err) => {
             if (err) {
               console.error(err);
@@ -34,6 +35,7 @@ const getConfig = (chatid, callback) => {
           });
       } else {
         row.tags = JSON.parse(row.tags);
+        row.excludetags = JSON.parse(row.excludetags);
         callback(row);
       }
     }
@@ -43,6 +45,14 @@ const getConfig = (chatid, callback) => {
 // 更新配置中的tags
 const setTags = (chatid, tags) => {
   db.run("UPDATE configs SET tags = ? WHERE chatid = ?", [JSON.stringify(tags), chatid], (err) => {
+    if (err) {
+      console.error(err);
+    }
+  });
+};
+// 更新配置中的排除tags
+const excludeTags = (chatid, tags) => {
+  db.run("UPDATE configs SET excludetags = ? WHERE chatid = ?", [JSON.stringify(tags), chatid], (err) => {
     if (err) {
       console.error(err);
     }
@@ -63,7 +73,7 @@ const sendConfig = (chatid, callback) => {
   getConfig(chatid, (config) => {
     if (config) {
       // console.log(config);
-      const configMessage = `目前使用配置:\nTags: ${config.tags}\n图片筛选种类: ${config.picmode}`;
+      const configMessage = `目前使用配置:\nTags: ${config.tags}\n图片筛选种类: ${config.picmode}\n排除标签：${config.excludetags}`;
       callback(configMessage);
     } else {
       callback('找不到配置');
@@ -74,9 +84,9 @@ const sendConfig = (chatid, callback) => {
 
 // 初始化用户/群组数据库配置
 const initConfig = (chatid, callback) => {
-  const newConfig = { chatid: chatid, tags: JSON.stringify([]), picmode: 'default' };
-  db.run("REPLACE INTO configs (chatid, tags, picmode) VALUES (?, ?, ?)",
-    [newConfig.chatid, newConfig.tags, newConfig.picmode],
+  const newConfig = { chatid: chatid, tags: JSON.stringify([]), picmode: 'default', excludetags:JSON.stringify([]) };
+  db.run("REPLACE INTO configs (chatid, tags, picmode, excludetags) VALUES (?, ?, ?, ?)",
+    [newConfig.chatid, newConfig.tags, newConfig.picmode,newConfig.excludetags],
     (err) => {
       if (err) {
         console.error(err);
@@ -89,14 +99,6 @@ const initConfig = (chatid, callback) => {
 
 //计算该标签图片总数
 const fetchTotalPosts = async (tags) => {
-  if (Array.isArray(tags) && tags.length > 0) {
-    console.log(tags);
-    tags = tags.join(' ');
-
-  }
-  else {
-    tags = [];
-  };
   const baseUrl = 'https://gelbooru.com/index.php';
   const params = {
     page: 'dapi',
@@ -127,13 +129,6 @@ const getRandomPic = async (totalPic, tags) => {
   if (totalPic >= 20000) {
     totalPic = 20000;
   };
-  if (Array.isArray(tags) && tags.length > 0) {
-    tags = tags.join(' ');
-
-  }
-  else {
-    tags = [];
-  };
   const baseUrl = 'https://gelbooru.com/index.php';
   const randomPage = Math.floor(Math.random() * totalPic);
   const params = {
@@ -160,7 +155,11 @@ const getRandomPic = async (totalPic, tags) => {
 //获取色图主函数
 const returnPic = async (config, callback) => {
   let tags = config.tags;
-  console.log(config.picmode);
+  let extags = config.excludetags;
+  // console.log(config.picmode);
+  if (!Array.isArray(tags)) {
+    tags = [];
+  }
   switch (config.picmode) {
     case "default":
       break;
@@ -177,7 +176,16 @@ const returnPic = async (config, callback) => {
       tags.push("rating:explicit")
       break;
   }
-  console.log(tags);
+  if (Array.isArray(extags) && extags.length > 0) {
+    extags.forEach(item => {
+      tags.push("-" + item);
+  });
+  };
+
+  if (Array.isArray(tags) && tags.length > 0) {
+    tags = tags.join(' ');
+  }
+  // console.log(tags);
   const totalPic = await fetchTotalPosts(tags);
   if (totalPic !== 0 && totalPic !== null) {
     const getPic = await getRandomPic(totalPic, tags);
@@ -193,4 +201,4 @@ const returnPic = async (config, callback) => {
   };
 };
 
-module.exports = { getConfig, setTags, setPicMode, sendConfig, initConfig, returnPic };
+module.exports = { getConfig, setTags, setPicMode, sendConfig, initConfig, returnPic,excludeTags };

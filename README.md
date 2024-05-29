@@ -16,8 +16,11 @@
 /setu 
 获取一张图片
 
-/settags tag1 tag2 
+/settags tag1 tag2 ...
 设置返回图片的标签
+
+/excludetags tag1 tag2 ...
+设置返回图片排除的标签 不需要带-号
 
 /setpicmode 图片分级
 分级列表：
