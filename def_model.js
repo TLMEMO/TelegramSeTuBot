@@ -124,20 +124,15 @@ const fetchTotalPosts = async (tags) => {
   };
 };
 //根据标签返回图片
-const getRandomPic = async (totalPic, tags) => {
-  //由于gelbooru访问更高的页数会报错的原因，所以说随即范围在20000以内，20000张图你一时半会也随即不到重复的吧（
-  if (totalPic >= 20000) {
-    totalPic = 20000;
-  };
+const getRandomPic = async (tags) => {
   const baseUrl = 'https://gelbooru.com/index.php';
-  const randomPage = Math.floor(Math.random() * totalPic);
   const params = {
     page: 'dapi',
     s: 'post',
     q: 'index',
-    tags: tags,
+    tags: "sort:random "+tags,
     limit: 1,
-    pid: randomPage,
+    pid: 1,
     api_key: config.gelbooru_APIkey,
     user_id: config.gelbooru_userid,
     json: 1
